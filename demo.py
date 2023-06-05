@@ -5,16 +5,19 @@ import re
 import time
 import pickle
 import re
+import json
 
 
 def check_file(text):
+    if re.match(r".+\.php$",text):
+        return False
     patt = r".+\.[\w]+$"
     return bool(re.match(patt,text))
 
-def parse_url(url:str,base_domain=r"[\w\d-]+\.[\w]+"):
+def parse_url(url:str,base_domain=r"(?:[\w\d-]+\.)+[\w]+"):
         if check_file(url):
             return None
-        pattern_html = r"https?:\/\/(?:www.)?("+base_domain+")((?:\/[\w\d-]+)*)"
+        pattern_html = r"https?:\/\/(?:www\.)?("+base_domain+")((?:\/[\w\d-]+)*)"
         match_html = re.match(pattern_html,url)
         if match_html:
             groups = match_html.groups()
@@ -45,8 +48,10 @@ class PageSave():
         self.base_domain = base_domain
 
     def _get_page(self,url):
+        with open("cookies.json","rb") as f:
+            biscits = json.load(f)
         time.sleep(0.5)
-        r = requests.get(url,cookies=self.cookies)
+        r = requests.get(url,cookies=biscits)
         return r.text
     
     def parse(self,raw_html):
@@ -59,9 +64,10 @@ class PageSave():
                 href = pq(l).attr("href")
                 parsed = parse_url(url=href,base_domain=self.base_domain)
                 if parsed != None:
-                    links.add(parsed[0])
+                    links.add(href)
                     # print(f"{href} is {parsed != None} = {parsed[0]}")
-                # print(f"{href} is {parsed != None}")
+                # else:
+                    # print(f"{href} is {parsed != None}")
             except:
                 pass
         return Web(title,links,raw_html)
@@ -137,21 +143,26 @@ class WebExportCrawler():
         self.visited_links.add(self.root_url)
         self.add_links_to_visit(root_web.links)
         while True:
-            if len(self.links_to_crawl) == 0:
-                break
-            next_url = self.links_to_crawl.pop()
-            parsed_url = parse_url(next_url)
-            web = p.request(next_url,parsed_url[0])
-            self.visited_links.add(next_url)
-            self.add_links_to_visit(web.links)
-            print(f"Links left:{len(self.links_to_crawl)}")
+            try:
+                if len(self.links_to_crawl) == 0:
+                    break
+                next_url = self.links_to_crawl.pop()
+                parsed_url = parse_url(next_url)
+                web = p.request(next_url,parsed_url[0])
+                self.visited_links.add(next_url)
+                self.add_links_to_visit(web.links)
+                print(f"Links left:{len(self.links_to_crawl)}")
+            except Exception as e:
+                print(f"Error:{e}")
+                # new = input("New Token:")
+                # self.cookies["MoodleSession"] = new
+                time.sleep(5)
+                self.links_to_crawl.add(next_url)
         
 
 
 
 if __name__ == "__main__":
-    cookies = {
-        "JSESSIONID": "",
-        "WTDGUID": "10"
-    }
-    c = WebExportCrawler("my","https://www.spsejecna.cz/",cookies)
+    # cookies = 
+    c = WebExportCrawler("pv","https://moodle.spsejecna.cz/course/view.php?id=176",None)
+    # print(parse_url("https://moodle.spsejecna.cz/course/index.php?categoryid=44"))
