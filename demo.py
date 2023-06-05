@@ -39,12 +39,13 @@ class Web():
         self.html = html
 
 class PageSave():
-    def __init__(self,base_domain,cookies) -> None:
+    def __init__(self,base_domain,name,cookies) -> None:
         self.cookies = cookies
+        self.name = name
         self.base_domain = base_domain
 
     def _get_page(self,url):
-        # time.sleep(6)
+        time.sleep(0.5)
         r = requests.get(url,cookies=self.cookies)
         return r.text
     
@@ -67,13 +68,12 @@ class PageSave():
     
 
     def make_path(self,path):
-        root_path = f"websites/{self.base_domain}"
+        root_path = f"websites/{self.base_domain}-{self.name}"
         if not os.path.isdir(root_path):
             os.makedirs(root_path)
-        path = self.base_domain + path
+        path = root_path + path
         if not os.path.isdir(path):
             os.makedirs(path)
-        print(path)
         return path
             
     
@@ -98,7 +98,8 @@ class PageSave():
     
 
 class WebExportCrawler():
-    def __init__(self,url,cookies) -> None:
+    def __init__(self,name,url,cookies) -> None:
+        self.name = name
         self.root_url = url
         self.cookies = cookies
         self.links_to_crawl = set()
@@ -131,8 +132,7 @@ class WebExportCrawler():
     def _start(self):
         parsed_root_url = parse_url(self.root_url)
         self.base_domain = parsed_root_url[1]
-        print(parsed_root_url)
-        p = PageSave(self.base_domain,self.cookies)
+        p = PageSave(self.base_domain,self.name,self.cookies)
         root_web = p.request(self.root_url,parsed_root_url[0])
         self.visited_links.add(self.root_url)
         self.add_links_to_visit(root_web.links)
@@ -150,4 +150,8 @@ class WebExportCrawler():
 
 
 if __name__ == "__main__":
-    c = WebExportCrawler("https://www.spsejecna.cz/",None)
+    cookies = {
+        "JSESSIONID": "",
+        "WTDGUID": "10"
+    }
+    c = WebExportCrawler("my","https://www.spsejecna.cz/",cookies)
